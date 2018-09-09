@@ -85,16 +85,17 @@ INTERFACES_HEADER(Eater)
     INTERFACE(0, eat, void(const std::string& food))
 INTERFACES_FOOTER
 
-INTERFACES_HEADER(Driver)
-    INTERFACE(0, drive, void())
-INTERFACES_FOOTER
-
 INTERFACES_HEADER(Speaker)
     INTERFACE(0, speak, void(const std::string& something))
 INTERFACES_FOOTER
 
 INTERFACES_HEADER(Walker)
     INTERFACE(0, walk, void())
+INTERFACES_FOOTER
+
+INTERFACES_HEADER(WalkerAndEater)
+    INTERFACE(0, walk, void())
+    INTERFACE(1, eat, void(const std::string& food))
 INTERFACES_FOOTER
 
 class Human {
@@ -127,16 +128,37 @@ void eat(const Eater& eater, const std::string& something) {
     eater.eat(something);
 }
 
-void drive(const Driver& driver) {
-    driver.drive();
-}
-
 void walk(const Walker& walker) {
     walker.walk();
 }
+
 void speak(const Speaker& speaker, const std::string& something) {
     speaker.speak(something);
 }
+
+void walkAndEat(const WalkerAndEater& weater, const std::string& something) {
+    cout << " - "; weater.walk();
+    cout << " and ..." << endl;
+    cout << " - "; weater.eat(something);
+}
+
+INTERFACES_HEADER(IncrementalMeter)
+    INTERFACE(0, increment, void())
+    INTERFACE(1, read, int())
+INTERFACES_FOOTER
+
+class IncrementalMeterImpl {
+public:
+    IncrementalMeterImpl(int v) : value_(v) {}
+    void increment() {
+        value_++;
+    }
+    int read() const {
+        return value_;
+    }
+private:
+    int value_;
+};
 
 int main()
 {
@@ -217,14 +239,59 @@ int main()
     eat(human, "Beef");
     eat(monkey, "Banana");
     speak(human, "Fxxk");
-    drive(human);
     walk(human);
     walk(monkey);
+    walkAndEat(human, "Ramen");
+    walkAndEat(monkey, "melon");
+
     // print:
     //    Human eat: Beef
     //    Monkey eat: Banana
     //    Human say: Fxxk
-    //    Human drive
     //    Human Walk
     //    Monkey Walk
+    //    - Human Walk
+    //    and ...
+    //    - Human eat: Ramen
+    //    - Monkey Walk
+    //    and ...
+    //    - Monkey eat: melon
+
+    std::cout << "=== Wrap smart pointer ===" << std::endl;
+
+    std::shared_ptr<Human> pHuman = std::make_shared<Human>();
+    Walker walker(pHuman);
+    walker.walk();
+    // Human Walk
+
+    std::cout << "=== Stateful object held by reference ===" << std::endl;
+    auto meterInst = make_shared<IncrementalMeterImpl>(0);
+    IncrementalMeter meter = meterInst;
+    std::cout << meter.read() << ", ";
+    meter.increment();
+    std::cout << meter.read() << ", ";
+    meter.increment();
+    std::cout << meter.read() << std::endl;
+    // 0, 1, 2
+
+    // the instance is shared by the 2 meters
+    meterInst->increment();
+    IncrementalMeter secondMeter = meter;
+    std::cout << secondMeter.read() << ", ";
+    meter.increment();
+    std::cout << secondMeter.read() << ", ";
+    secondMeter.increment();
+    std::cout << secondMeter.read() << ", ";
+    meterInst->increment();
+    std::cout << secondMeter.read() << endl;
+    // 3, 4, 5, 6
+
+    std::cout << "=== Stateful object held by value ===" << std::endl;
+    IncrementalMeterImpl meterValue(0);
+    IncrementalMeter meterBase = meterValue;
+    meterValue.increment();
+    std::cout << meterBase.read() << ", ";
+    meterBase.increment();
+    std::cout << meterBase.read() << endl;
+    // 0, 1
 }

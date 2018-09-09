@@ -44,8 +44,13 @@ public:\
     template<class T> \
     class_name& operator=(const T& a) { \
         std::shared_ptr<T> dummy = std::make_shared<T>(a); \
-        Init<T, defined_interface_count_>::init(this, dummy.get()); \
-        data_ = std::move(dummy); \
+        *this = dummy;\
+        return *this;\
+    } \
+    template<class T> \
+    class_name& operator=(const std::shared_ptr<T>& pointer) {\
+        Init<T, defined_interface_count_>::init(this, pointer.get()); \
+        data_ = pointer; \
         return *this;\
     } \
     class_name& operator=(const class_name& a) {\
