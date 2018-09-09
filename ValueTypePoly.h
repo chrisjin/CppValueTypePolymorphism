@@ -86,7 +86,6 @@ void init_##function_name(T *p) { \
 } \
 template <class T> \
 struct Init<T, index> { \
-    static const bool IS_EMPTY = false; \
     static void init(TheClass* inst, T* p) { \
         Init<T, (index) - 1>::init(inst, p); \
         inst->init_##function_name(p); \
