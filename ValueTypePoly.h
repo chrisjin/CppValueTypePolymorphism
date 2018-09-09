@@ -4,14 +4,14 @@
 
 namespace __private_helpers_ValueTypePoly {
 
-template <template<class T, int a> class T, class ActualT, int count>
+template <template<int a, int dummy> class T, int count>
 struct LastNonEmpty {
-    static const int last = !T<ActualT, count>::IS_EMPTY
-    ? count: LastNonEmpty<T, ActualT, count - 1>::last;
+    static const int last = !T<count, 0>::IS_EMPTY
+    ? count: LastNonEmpty<T, count - 1>::last;
 };
 
-template <template<class T, int a> class T, class ActualT>
-struct LastNonEmpty<T, ActualT, -1> {
+template <template<int a, int dummy> class T>
+struct LastNonEmpty<T, -1> {
     static const int last = -1;
 };
 
@@ -44,26 +44,32 @@ public:\
     template<class T> \
     class_name& operator=(const T& a) { \
         std::shared_ptr<T> dummy = std::make_shared<T>(a); \
-        static const int last = ::__private_helpers_ValueTypePoly::LastNonEmpty<Init, T, interfaces_count_limit - 1>::last; \
-        static_assert(last > -1, "No interface defined!");\
-        Init<T, last>::init(this, dummy.get()); \
+        Init<T, defined_interface_count_>::init(this, dummy.get()); \
         data_ = std::move(dummy); \
         return *this;\
     } \
+    class_name& operator=(const class_name& a) {\
+        Copier<defined_interface_count_, 0>::copy(this, &a);\
+        return *this;\
+    }\
 private:\
     typedef class_name TheClass;\
     template <class T, int index> \
-    struct Init { \
-        static const bool IS_EMPTY = true; \
-    }; \
+    struct Init { };\
     template <class T> /* seed */ \
     struct Init<T, -1> { \
-        static const bool IS_EMPTY = true; \
         static void init(TheClass* inst, T* p) {} \
     }; \
-    template <class T> \
-    struct Init<T, interfaces_count_limit> { \
+    template < int index, int dummy> \
+    struct Copier { \
         static const bool IS_EMPTY = true; \
+    };\
+    template <int dummy> \
+    struct Copier<-1, dummy> { \
+        static const bool IS_EMPTY = true; \
+        static void copy(TheClass* theClass, const TheClass* another) { \
+            theClass->data_ = another->data_;\
+        } \
     };
 
 
@@ -85,10 +91,22 @@ struct Init<T, index> { \
         Init<T, (index) - 1>::init(inst, p); \
         inst->init_##function_name(p); \
     } \
+}; \
+template <int dummy> \
+struct Copier<index, dummy> { \
+    static const bool IS_EMPTY = false; \
+    static void copy(TheClass* theClass, const TheClass* another) {\
+        Copier<(index) - 1, dummy>::copy(theClass, another);\
+        const_cast<std::function<arguments>&>(theClass->function_name) \
+            = another->function_name;\
+    } \
 };
 
 #define INTERFACES_FOOTER \
 protected: \
+static const int defined_interface_count_ \
+        = ::__private_helpers_ValueTypePoly::LastNonEmpty<Copier, interfaces_count_limit_ - 1>::last; \
+static_assert(defined_interface_count_ > -1, "No interface defined!");\
 std::shared_ptr<void> data_; \
 };
 

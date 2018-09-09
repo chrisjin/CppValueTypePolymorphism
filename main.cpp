@@ -61,6 +61,7 @@ void callInterfaceB(const Test::InterfaceB& a) {
 
 int main()
 {
+    std::cout << "=== Function call ===" << std::endl;
     InterfaceImpl inst(2345);
     callInterfaceB(inst);
     callInterfaceA(inst);
@@ -70,18 +71,35 @@ int main()
     //    functionB Called. arg: 999,987
     //    functionA Called. Val: 2345
     //    functionB Called. arg: 3,4
-    
+    std::cout << "=== Constructor from impl ===" << std::endl;
     Test::InterfaceA baseA = inst;
     baseA.functionB(34, 45);
-    Test::InterfaceA anotherA;
-    anotherA = inst;
     // print:
     //    functionB Called. arg: 34,45
+
+    std::cout << "=== Assignment operator from another interface ===" << std::endl;
+    Test::InterfaceA anotherA;
+    anotherA = baseA;
+    anotherA.functionA(12, 45);
+    anotherA.functionB(334, 445);
+    // print:
+    //    functionB Called. arg: 334,445
+
+    std::cout << "=== Copy Constructor from another interface ===" << std::endl;
+    Test::InterfaceA thirdA(baseA);
+    thirdA.functionA(12, 45);
+    thirdA.functionB(334, 445);
+
+    std::cout << "=== Impl with return value ===" << std::endl;
     InterfaceCImpl cImpl;
     Test::InterfaceC baseC(cImpl);
     auto combined = baseC.combine("Foo", "Bar");
-    
+
     std::cout << combined << std::endl;
     // print:
     //    FooBar
+
+    // === Const function memeber ===
+    // baseC.combine = [](const std::string& a, const std::string& b) {return "";};
+    // Compiler error
 }
