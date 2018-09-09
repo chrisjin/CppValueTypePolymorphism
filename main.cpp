@@ -81,6 +81,63 @@ void callInterfaceB(const Test::InterfaceB& a) {
     a.functionB(999, 987);
 }
 
+INTERFACES_HEADER(Eater)
+    INTERFACE(0, eat, void(const std::string& food))
+INTERFACES_FOOTER
+
+INTERFACES_HEADER(Driver)
+    INTERFACE(0, drive, void())
+INTERFACES_FOOTER
+
+INTERFACES_HEADER(Speaker)
+    INTERFACE(0, speak, void(const std::string& something))
+INTERFACES_FOOTER
+
+INTERFACES_HEADER(Walker)
+    INTERFACE(0, walk, void())
+INTERFACES_FOOTER
+
+class Human {
+public:
+    void eat(const std::string& food) const {
+        cout << "Human eat: " << food << endl;
+    }
+    void drive() const {
+        cout << "Human drive" << endl;
+    }
+    void speak(const std::string& something) const {
+        cout << "Human say: " << something << endl;
+    }
+    void walk() const {
+        cout << "Human Walk " << endl;
+    }
+};
+
+class Monkey {
+public:
+    void eat(const std::string& food) const {
+        cout << "Monkey eat: " << food << endl;
+    }
+    void walk() const {
+        cout << "Monkey Walk " << endl;
+    }
+};
+
+void eat(const Eater& eater, const std::string& something) {
+    eater.eat(something);
+}
+
+void drive(const Driver& driver) {
+    driver.drive();
+}
+
+void walk(const Walker& walker) {
+    walker.walk();
+}
+void speak(const Speaker& speaker, const std::string& something) {
+    speaker.speak(something);
+}
+
 int main()
 {
     std::cout << "=== Function call ===" << std::endl;
@@ -154,4 +211,20 @@ int main()
     // Value type polymorphism: 133 ms, 34 ms with -O2
     // std::function          : 169 ms, 35 ms with -O2
     // virtual function       : 34  ms, 20 ms with -O2
+
+    Human human;
+    Monkey monkey;
+    eat(human, "Beef");
+    eat(monkey, "Banana");
+    speak(human, "Fxxk");
+    drive(human);
+    walk(human);
+    walk(monkey);
+    // print:
+    //    Human eat: Beef
+    //    Monkey eat: Banana
+    //    Human say: Fxxk
+    //    Human drive
+    //    Human Walk
+    //    Monkey Walk
 }
