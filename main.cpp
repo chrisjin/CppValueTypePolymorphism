@@ -34,7 +34,7 @@ class InterfaceImpl {
 public:
     InterfaceImpl(int val) : val_(val) {
     }
-    void functionA(int a, int b) const {
+    void functionA(int a, int b) {
         printf("functionA Called. Val: %d\n", val_);
     }
     void functionB(int a, int b) {
@@ -230,7 +230,7 @@ int main()
     auto t4 = steady_clock::now();
     std::cout << duration_cast<milliseconds>(t4 - t3).count() << std::endl;
     // performance:
-    // Value type polymorphism: 133 ms, 34 ms with -O2
+    // Value type polymorphism: 69  ms, 34 ms with -O2
     // std::function          : 169 ms, 35 ms with -O2
     // virtual function       : 34  ms, 20 ms with -O2
 

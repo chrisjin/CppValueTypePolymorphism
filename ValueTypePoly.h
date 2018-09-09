@@ -2,7 +2,7 @@
 
 #include <functional>
 
-namespace __private_helpers_ValueTypePoly {
+namespace __private_helpers {
 
 template <template<int a, int dummy> class T, int count>
 struct LastNonEmpty {
@@ -15,18 +15,74 @@ struct LastNonEmpty<T, -1> {
     static const int last = -1;
 };
 
-template <class C, typename Ret, typename ... Ts>
-std::function<Ret(Ts...)> bind_this(C* c, Ret (C::*m)(Ts...))
-{
-    return [=](auto&&... args) { return (c->*m)(std::forward<decltype(args)>(args)...); };
 }
 
-template <class C, typename Ret, typename ... Ts>
-std::function<Ret(Ts...)> bind_this(const C* c, Ret (C::*m)(Ts...) const)
-{
-    return [=](auto&&... args) { return (c->*m)(std::forward<decltype(args)>(args)...); };
-}
-    
+namespace __private_delegate {
+
+template<typename Ret, typename ... Ts>
+class BaseCallable {
+public:
+    virtual Ret call(Ts&&... args) = 0;
+};
+
+template<class T, typename Ret, typename ... Ts>
+class CallableConst : public BaseCallable<Ret, Ts...> {
+public:
+    typedef Ret (T::*ConstMemFunction)(Ts...) const;
+    CallableConst(T* inst, ConstMemFunction memfunction) : inst_(inst), func_(memfunction) {
+    }
+    virtual Ret call(Ts&&... args) {
+        return (inst_->*func_)(std::forward<decltype(args)>(args)...);
+    }
+private:
+    T* inst_;
+    ConstMemFunction func_;
+};
+
+template<class T, typename Ret, typename ... Ts>
+class Callable : public BaseCallable<Ret, Ts...> {
+public:
+    typedef Ret (T::*MemFunction)(Ts...);
+    Callable(T* inst, MemFunction memfunction) : inst_(inst), func_(memfunction) {
+    }
+    virtual Ret call(Ts&&... args) {
+        return (inst_->*func_)(std::forward<decltype(args)>(args)...);
+    }
+private:
+    T* inst_;
+    MemFunction func_;
+};
+
+template <typename F>
+class MemFunction;
+
+template <typename R, typename... Args>
+class MemFunction<R(Args...)> {
+public:
+    MemFunction() {}
+    template<class T, typename Ret, typename ... Ts>
+    static MemFunction<Ret(Ts...)> from(T* object, Ret (T::*mem_function)(Ts...) const) {
+        return MemFunction(object, mem_function);
+    }
+    template<class T, typename Ret, typename ... Ts>
+    static MemFunction<Ret(Ts...)> from(T* object, Ret (T::*mem_function)(Ts...)) {
+        return MemFunction(object, mem_function);
+    }
+    template<class T, typename Ret, typename ... Ts>
+    MemFunction(T* object, Ret (T::*mem_function)(Ts...) const)
+    : callable_(std::make_shared<CallableConst<T, Ret, Ts...>>(object, mem_function)) {
+    }
+    template<class T, typename Ret, typename ... Ts>
+    MemFunction(T* object, Ret (T::*mem_function)(Ts...))
+    : callable_(std::make_shared<Callable<T, Ret, Ts...>>(object, mem_function)) {
+    }
+    R operator()(Args&&... args) const {
+        return callable_->call(std::forward<decltype(args)>(args)...);
+    }
+private:
+    std::shared_ptr<BaseCallable<R, Args...>> callable_;
+};
+
 }
 
 #define DEFAULT_INTERFACES_COUNT_LIMIT 10
@@ -36,6 +92,8 @@ std::function<Ret(Ts...)> bind_this(const C* c, Ret (C::*m)(Ts...) const)
 #define INTERFACES_HEADER_EX(class_name, interfaces_count_limit) \
 class class_name { \
     static const int interfaces_count_limit_ = interfaces_count_limit;\
+    template<class arguments>\
+    using MemFunctionType = __private_delegate::MemFunction<arguments>;\
 public:\
     class_name(const class_name& another) = default;\
     template<class T>\
@@ -82,12 +140,12 @@ private:\
 public:\
 static_assert((index) < interfaces_count_limit_ && (index) >= 0, \
             "Interface index out of range!");\
-const std::function<arguments> function_name; \
+const __private_delegate::MemFunction<arguments> function_name; \
 private:\
 template<class T> \
 void init_##function_name(T *p) { \
-    const_cast<std::function<arguments>&>(function_name) \
-            = ::__private_helpers_ValueTypePoly::bind_this(p, &T::function_name); \
+    const_cast<MemFunctionType<arguments>&>(function_name) \
+            = MemFunctionType<arguments>::from(p, &T::function_name); \
 } \
 template <class T> \
 struct Init<T, index> { \
@@ -101,7 +159,7 @@ struct Copier<index, dummy> { \
     static const bool IS_EMPTY = false; \
     static void copy(TheClass* theClass, const TheClass* another) {\
         Copier<(index) - 1, dummy>::copy(theClass, another);\
-        const_cast<std::function<arguments>&>(theClass->function_name) \
+        const_cast<MemFunctionType<arguments>&>(theClass->function_name) \
             = another->function_name;\
     } \
 };
@@ -109,7 +167,7 @@ struct Copier<index, dummy> { \
 #define INTERFACES_FOOTER \
 protected: \
 static const int defined_interface_count_ \
-        = ::__private_helpers_ValueTypePoly::LastNonEmpty<Copier, interfaces_count_limit_ - 1>::last; \
+        = ::__private_helpers::LastNonEmpty<Copier, interfaces_count_limit_ - 1>::last; \
 static_assert(defined_interface_count_ > -1, "No interface defined!");\
 std::shared_ptr<void> data_; \
 };
