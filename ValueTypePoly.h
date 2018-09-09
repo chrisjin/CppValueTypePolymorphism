@@ -156,7 +156,7 @@ private:\
         static const bool IS_EMPTY = true; \
         template<class AnotherType>\
         static void copy(TheClass* theClass, const AnotherType* another) { \
-            theClass->data_ = another->data_;\
+            theClass->data_ = another->getDataPointer();\
         } \
     };
 
@@ -191,6 +191,7 @@ struct Copier<index, dummy> { \
 };
 
 #define INTERFACES_FOOTER \
+public: std::shared_ptr<void> getDataPointer() const {return data_;}\
 protected: \
 static const int defined_interface_count_ \
         = ::__private_helpers::LastNonEmpty<Copier, interfaces_count_limit_ - 1>::last; \

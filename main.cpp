@@ -283,8 +283,15 @@ int main()
     walk(monkey);
     walkAndEat(human, "Ramen");
     walkAndEat(monkey, "melon");
+
+    // extract an interface.
     WalkerAndEater weater = human;
-//    Walker only_walker = weater;
+    Eater only_eater = weater;
+    only_eater.eat("Fried rice");
+
+    // compiler error. since eater doesn't have all interfaces needed by WalkerAndEater
+    // WalkerAndEater weater_super = only_eater;
+
     // print:
     //    Human eat: Beef
     //    Monkey eat: Banana
@@ -297,6 +304,7 @@ int main()
     //    - Monkey Walk
     //    and ...
     //    - Monkey eat: melon
+    //    Human eat: Fried rice
 
     std::cout << "=== Wrap smart pointer ===" << std::endl;
 

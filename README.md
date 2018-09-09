@@ -69,6 +69,15 @@ walk(human);
 walk(monkey);
 walkAndEat(human, "Ramen");
 walkAndEat(monkey, "melon");
+
+// extract an interface.
+WalkerAndEater weater = human;
+Eater only_eater = weater;
+only_eater.eat("Fried rice");
+
+// compiler error. since eater doesn't have all interfaces needed by WalkerAndEater
+// WalkerAndEater weater_super = only_eater;
+
 // print:
 //    Human eat: Beef
 //    Monkey eat: Banana
@@ -81,4 +90,5 @@ walkAndEat(monkey, "melon");
 //    - Monkey Walk
 //    and ...
 //    - Monkey eat: melon
+//    Human eat: Fried rice
 ```
