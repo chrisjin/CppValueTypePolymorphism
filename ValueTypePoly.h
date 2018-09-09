@@ -1,5 +1,4 @@
 //
-//  隹王六十又八年既死霸乙已
 //  Created by AmateurCat on 09/08/2018.
 //  Copyright © 2017 AmateurCat. No rights reserved.
 //
@@ -123,7 +122,7 @@ public:\
         return *this;\
     } \
     template<class T, \
-    typename std::enable_if<std::is_copy_constructible<T>::value && !IsInterface<T>::value>::type* value = nullptr> \
+    typename std::enable_if<!IsInterface<T>::value>::type* value = nullptr> \
     class_name& operator=(const std::shared_ptr<T>& pointer) {\
         Init<T, defined_interface_count_>::init(this, pointer.get()); \
         data_ = pointer; \
@@ -134,6 +133,14 @@ public:\
     class_name& operator=(const T& pointer) {\
         Copier<defined_interface_count_, 0>::copy(this, &pointer);\
         return *this;\
+    } \
+    template<class T, \
+    typename std::enable_if<!std::is_copy_constructible<T>::value && !IsInterface<T>::value>::type* value = nullptr> \
+    class_name& operator=(const T& pointer) {printf("PPP\n");\
+        static_assert(std::is_copy_constructible<T>::value || IsInterface<T>::value, \
+            "The value type doesn't have copy constructor. " \
+            "Add copy constructor or use std::shared_ptr!"); \
+        return * this; \
     } \
     class_name& operator=(const class_name& a) {\
         Copier<defined_interface_count_, 0>::copy(this, &a);\

@@ -192,12 +192,14 @@ public:
     }
 };
 
-struct A {
-    static void x() {}
-};
-
-struct B {
-    void Xx() {}
+class NotCopyableMonkey {
+public:
+    NotCopyableMonkey() {}
+    void eat(const std::string& something) {
+        std::cout << "Not copyable monkey eating " << something << std::endl;
+    }
+    NotCopyableMonkey(const NotCopyableMonkey&) = delete;
+    NotCopyableMonkey& operator=(const NotCopyableMonkey&) = delete;
 };
 
 int main()
@@ -351,7 +353,12 @@ int main()
     withName.printName(naming);
     withName.getName(naming) = "Bob";
     withName.printName(naming);
-    std::cout << __private_helpers::IsInterface<ObjectWithName>::value << std::endl;
-    std::cout << __private_helpers::IsInterface<ObjectWithNameImpl>::value << std::endl;
 
+    std::cout << "=== not copyable ===" << std::endl;
+    // compiler error static_assert failed
+    //    NotCopyableMonkey notCopyableMonkey1;
+    //    Eater notcopyableEater1 = notCopyableMonkey1;
+    // no error with shared_ptr
+    Eater notcopyableEater = std::make_shared<NotCopyableMonkey>();
+    notcopyableEater.eat("Not copyable banana");
 }
