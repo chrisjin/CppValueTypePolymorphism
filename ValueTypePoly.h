@@ -145,7 +145,7 @@ private:\
 public:\
 static_assert((index) < interfaces_count_limit_ && (index) >= 0, \
             "Interface index out of range!");\
-const __private_delegate::MemFunction<arguments> function_name; \
+const MemFunctionType<arguments> function_name; \
 private:\
 template<class T> \
 void init_##function_name(T *p) { \
