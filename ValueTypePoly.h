@@ -1,3 +1,8 @@
+//
+//  隹王六十又八年既死霸乙已
+//  Created by AmateurCat on 09/08/2018.
+//  Copyright © 2017 AmateurCat. No rights reserved.
+//
 #pragma once
 
 #include <functional>
