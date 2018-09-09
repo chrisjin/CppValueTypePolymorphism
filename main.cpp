@@ -1,8 +1,9 @@
 #include "ValueTypePoly.h"
 #include <iostream>
+#include <chrono>
 using namespace std;
 using namespace std::placeholders;
-
+using namespace std::chrono;
 namespace Test {
 INTERFACES_HEADER_EX(InterfaceA, 2)
     INTERFACE(0, functionA, void(int a, int b))
@@ -17,6 +18,11 @@ INTERFACES_FOOTER
     
 INTERFACES_HEADER(InterfaceC)
     INTERFACE(0, combine, std::string(const std::string& a, const std::string& b))
+INTERFACES_FOOTER
+
+
+INTERFACES_HEADER(InterfaceEmpty)
+    INTERFACE(0, empty, void())
 INTERFACES_FOOTER
 
 // Compiler error: no interface defined
@@ -48,6 +54,22 @@ public:
     }
 };
 
+class EmptyImpl {
+public:
+    void empty() {
+    }
+};
+
+class EmptyVirtual {
+public:
+    virtual void empty() = 0;
+};
+
+class EmptyVirtualImpl : public EmptyVirtual {
+public:
+    void empty() override {
+    }
+};
 void callInterfaceA(const Test::InterfaceA& a) {
     a.functionA(1, 2);
     a.functionB(3, 4);
@@ -102,4 +124,34 @@ int main()
     // === Const function memeber ===
     // baseC.combine = [](const std::string& a, const std::string& b) {return "";};
     // Compiler error
+    const int count = 10000000;
+    EmptyImpl empty;
+    Test::InterfaceEmpty emptyInterface(empty);
+
+    auto t1 = steady_clock::now();
+    for (int i = 0; i < count; i++) {
+        emptyInterface.empty();
+    }
+    auto t2 = steady_clock::now();
+    std::cout << duration_cast<milliseconds>(t2 - t1).count() << std::endl;
+
+    std::function<void()> func = std::bind(&EmptyImpl::empty, &empty);
+    auto t5 = steady_clock::now();
+    for (int i = 0; i < count; i++) {
+        func();
+    }
+    auto t6 = steady_clock::now();
+    std::cout << duration_cast<milliseconds>(t6 - t5).count() << std::endl;
+
+    auto t3 = steady_clock::now();
+    EmptyVirtual* baseEmpty = new EmptyVirtualImpl();
+    for (int i = 0; i < count; i++) {
+        baseEmpty->empty();
+    }
+    auto t4 = steady_clock::now();
+    std::cout << duration_cast<milliseconds>(t4 - t3).count() << std::endl;
+    // performance:
+    // Value type polymorphism: 133 ms, 34 ms with -O2
+    // std::function          : 169 ms, 35 ms with -O2
+    // virtual function       : 34  ms, 20 ms with -O2
 }
