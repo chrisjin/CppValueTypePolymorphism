@@ -160,6 +160,46 @@ private:
     int value_;
 };
 
+class Naming {
+public:
+    void setName(const std::string& name) {
+        name_ = name;
+    }
+    std::string& getName() {
+        return name_;
+    }
+private:
+    std::string name_;
+};
+
+INTERFACES_HEADER(ObjectWithName)
+    INTERFACE(0, printName, void(Naming& naming))
+    INTERFACE(1, setName, void(Naming& naming, const std::string& name))
+    INTERFACE(2, getName, std::string& (Naming& naming))
+INTERFACES_FOOTER
+
+class ObjectWithNameImpl {
+public:
+    void printName(Naming& naming) {
+        std::cout << "Name: " << naming.getName() << std::endl;
+    }
+    void setName(Naming& naming, const std::string& name) {
+        naming.setName(name);
+        std::cout << "Name set to: " << name << std::endl;
+    }
+    std::string& getName(Naming& naming) {
+        return naming.getName();
+    }
+};
+
+struct A {
+    static void x() {}
+};
+
+struct B {
+    void Xx() {}
+};
+
 int main()
 {
     std::cout << "=== Function call ===" << std::endl;
@@ -243,7 +283,8 @@ int main()
     walk(monkey);
     walkAndEat(human, "Ramen");
     walkAndEat(monkey, "melon");
-
+    WalkerAndEater weater = human;
+//    Walker only_walker = weater;
     // print:
     //    Human eat: Beef
     //    Monkey eat: Banana
@@ -294,4 +335,15 @@ int main()
     meterBase.increment();
     std::cout << meterBase.read() << endl;
     // 0, 1
+
+    std::cout << "=== Parameters forwarding ===" << std::endl;
+    Naming naming;
+    ObjectWithName withName = ObjectWithNameImpl();
+    withName.setName(naming, "Alice");
+    withName.printName(naming);
+    withName.getName(naming) = "Bob";
+    withName.printName(naming);
+    std::cout << __private_helpers::IsInterface<ObjectWithName>::value << std::endl;
+    std::cout << __private_helpers::IsInterface<ObjectWithNameImpl>::value << std::endl;
+
 }

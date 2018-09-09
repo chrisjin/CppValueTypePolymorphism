@@ -7,7 +7,10 @@
 
 #include <functional>
 
+#define INTERFACE_SIGNATURE INTERFACE_3141592653345678
+
 namespace __private_helpers {
+
 
 template <template<int a, int dummy> class T, int count>
 struct LastNonEmpty {
@@ -20,6 +23,11 @@ struct LastNonEmpty<T, -1> {
     static const int last = -1;
 };
 
+template <typename T, typename Another = int>
+struct IsInterface : std::false_type { };
+
+template <typename T>
+struct IsInterface <T, decltype(&T::INTERFACE_SIGNATURE, 0)> : std::true_type { };
 }
 
 namespace __private_delegate {
@@ -98,22 +106,33 @@ private:
 class class_name { \
     static const int interfaces_count_limit_ = interfaces_count_limit;\
     template<class arguments>\
-    using MemFunctionType = __private_delegate::MemFunction<arguments>;\
+    using MemFunctionType = ::__private_delegate::MemFunction<arguments>;\
+    template<class Arg1, class Arg2 = int>\
+    using IsInterface = ::__private_helpers::IsInterface<Arg1, Arg2>;\
 public:\
+    static void INTERFACE_SIGNATURE() {}\
     class_name(const class_name& another) = default;\
     template<class T>\
     class_name(const T& a) {*this = a;}\
     class_name() {}\
-    template<class T> \
+    template<class T, \
+    typename std::enable_if<std::is_copy_constructible<T>::value && !IsInterface<T>::value>::type* value = nullptr> \
     class_name& operator=(const T& a) { \
         std::shared_ptr<T> dummy = std::make_shared<T>(a); \
         *this = dummy;\
         return *this;\
     } \
-    template<class T> \
+    template<class T, \
+    typename std::enable_if<std::is_copy_constructible<T>::value && !IsInterface<T>::value>::type* value = nullptr> \
     class_name& operator=(const std::shared_ptr<T>& pointer) {\
         Init<T, defined_interface_count_>::init(this, pointer.get()); \
         data_ = pointer; \
+        return *this;\
+    } \
+    template<class T, \
+    typename std::enable_if<IsInterface<T>::value>::type* value = nullptr> \
+    class_name& operator=(const T& pointer) {\
+        Copier<defined_interface_count_, 0>::copy(this, &pointer);\
         return *this;\
     } \
     class_name& operator=(const class_name& a) {\
@@ -135,7 +154,8 @@ private:\
     template <int dummy> \
     struct Copier<-1, dummy> { \
         static const bool IS_EMPTY = true; \
-        static void copy(TheClass* theClass, const TheClass* another) { \
+        template<class AnotherType>\
+        static void copy(TheClass* theClass, const AnotherType* another) { \
             theClass->data_ = another->data_;\
         } \
     };
@@ -162,7 +182,8 @@ struct Init<T, index> { \
 template <int dummy> \
 struct Copier<index, dummy> { \
     static const bool IS_EMPTY = false; \
-    static void copy(TheClass* theClass, const TheClass* another) {\
+    template<class AnotherType>\
+    static void copy(TheClass* theClass, const AnotherType* another) {\
         Copier<(index) - 1, dummy>::copy(theClass, another);\
         const_cast<MemFunctionType<arguments>&>(theClass->function_name) \
             = another->function_name;\
@@ -175,5 +196,6 @@ static const int defined_interface_count_ \
         = ::__private_helpers::LastNonEmpty<Copier, interfaces_count_limit_ - 1>::last; \
 static_assert(defined_interface_count_ > -1, "No interface defined!");\
 std::shared_ptr<void> data_; \
+template <int index, int dummy> friend struct Copier;\
 };
 
