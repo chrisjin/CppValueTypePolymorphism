@@ -10,16 +10,21 @@
 
 namespace __private_helpers {
 
+template<template<int a, int dummy> class T, bool empty, int count> struct IfEmpty;
 
 template <template<int a, int dummy> class T, int count>
 struct LastNonEmpty {
-    static const int last = !T<count, 0>::IS_EMPTY
-    ? count: LastNonEmpty<T, count - 1>::last;
+    static const int last = IfEmpty<T, T<count, 0>::IS_EMPTY, count>::value;
 };
 
-template <template<int a, int dummy> class T>
-struct LastNonEmpty<T, -1> {
-    static const int last = -1;
+template<template<int a, int dummy> class T, int count>
+struct IfEmpty<T, false, count> {
+    static const int value = LastNonEmpty<T, count + 1>::last;
+};
+
+template<template<int a, int dummy> class T, int count>
+struct IfEmpty<T, true, count> {
+    static const int value = count - 1;
 };
 
 template <typename T, typename Another = int>
@@ -27,6 +32,7 @@ struct IsInterface : std::false_type { };
 
 template <typename T>
 struct IsInterface <T, decltype(&T::INTERFACE_SIGNATURE, 0)> : std::true_type { };
+
 }
 
 namespace __private_delegate {
@@ -97,7 +103,7 @@ private:
 
 }
 
-#define DEFAULT_INTERFACES_COUNT_LIMIT 10
+#define DEFAULT_INTERFACES_COUNT_LIMIT 255
 
 #define INTERFACES_HEADER(class_name) INTERFACES_HEADER_EX(class_name, DEFAULT_INTERFACES_COUNT_LIMIT)
 
@@ -201,7 +207,7 @@ struct Copier<index, dummy> { \
 public: std::shared_ptr<void> getDataPointer() const {return data_;}\
 protected: \
 static const int defined_interface_count_ \
-        = ::__private_helpers::LastNonEmpty<Copier, interfaces_count_limit_ - 1>::last; \
+        = ::__private_helpers::LastNonEmpty<Copier, 0>::last; \
 static_assert(defined_interface_count_ > -1, "No interface defined!");\
 std::shared_ptr<void> data_; \
 template <int index, int dummy> friend struct Copier;\

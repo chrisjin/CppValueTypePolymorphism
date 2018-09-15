@@ -1,6 +1,7 @@
 #include "ValueTypePoly.h"
 #include <iostream>
 #include <chrono>
+#include <vector>
 using namespace std;
 using namespace std::placeholders;
 using namespace std::chrono;
@@ -202,6 +203,30 @@ public:
     NotCopyableMonkey& operator=(const NotCopyableMonkey&) = delete;
 };
 
+template <typename T, typename Another>
+struct IsInterface_ : std::false_type { };
+
+template <typename T>
+struct IsInterface_ <T, decltype(&T::INTERFACE_SIGNATURE)> : std::true_type { };
+
+template <typename T>
+class IsInterface__
+{
+    template <typename C> constexpr static bool get(decltype(&C::INTERFACE_SIGNATURE, 'a') k) {
+        return true;
+    }
+    template <typename C> constexpr static bool get(int a) {return false;}
+public:
+    const static bool value = get<T>('a');
+};
+
+class ClassWithoutDefault {
+public:
+    ClassWithoutDefault(int a) {}
+};
+
+
+
 int main()
 {
     std::cout << "=== Function call ===" << std::endl;
@@ -291,6 +316,13 @@ int main()
     Eater only_eater = weater;
     only_eater.eat("Fried rice");
 
+    std::vector<WalkerAndEater> arr;
+    arr.push_back(human);
+    arr.push_back(monkey);
+    for (int i = 0; i < arr.size(); i++) {
+        std::cout << "--";
+        arr[i].eat("shit");
+    }
     // compiler error. since eater doesn't have all interfaces needed by WalkerAndEater
     // WalkerAndEater weater_super = only_eater;
 
@@ -361,4 +393,6 @@ int main()
     // no error with shared_ptr
     Eater notcopyableEater = std::make_shared<NotCopyableMonkey>();
     notcopyableEater.eat("Not copyable banana");
+    cout << IsInterface__<ObjectWithName>::value << endl;
+    cout << IsInterface__<ObjectWithNameImpl>::value << endl;
 }
