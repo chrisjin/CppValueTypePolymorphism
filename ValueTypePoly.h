@@ -10,21 +10,25 @@
 
 namespace __private_helpers {
 
-template<template<int a, int dummy> class T, bool empty, int count> struct IfEmpty;
+template<int index> struct DefaultCounter {
+    static const int value = index;
+};
 
-template <template<int a, int dummy> class T, int count>
+template<template<int a, int dummy> class T, bool empty, int count, template<int index> class CounterClass> struct IfEmpty;
+
+template <template<int a, int dummy> class T, int count, template<int index> class CounterClass>
 struct LastNonEmpty {
-    static const int last = IfEmpty<T, T<count, 0>::IS_EMPTY, count>::value;
+    static const int last = IfEmpty<T, T<count, 0>::IS_EMPTY, count, CounterClass>::value;
 };
 
-template<template<int a, int dummy> class T, int count>
-struct IfEmpty<T, false, count> {
-    static const int value = LastNonEmpty<T, count + 1>::last;
+template<template<int a, int dummy> class T, int count, template<int index> class CounterClass>
+struct IfEmpty<T, false, count, CounterClass> {
+    static const int value = LastNonEmpty<T, count + 1, CounterClass>::last;
 };
 
-template<template<int a, int dummy> class T, int count>
-struct IfEmpty<T, true, count> {
-    static const int value = count - 1;
+template<template<int a, int dummy> class T, int count, template<int index> class CounterClass>
+struct IfEmpty<T, true, count, CounterClass> {
+    static const int value = CounterClass<count>::value - 1;
 };
 
 template <typename T, typename Another = int>
@@ -180,6 +184,10 @@ static_assert((index) < interfaces_count_limit_ && (index) >= 0, \
             "Interface index out of range!");\
 const MemFunctionType<arguments> function_name; \
 private:\
+template<int index_internal> \
+struct Counter##function_name {\
+    static const int value = index_internal;\
+};\
 template<class T> \
 void init_##function_name(T *p) { \
     const_cast<MemFunctionType<arguments>&>(function_name) \
@@ -202,12 +210,14 @@ struct Copier<index, dummy> { \
             = another->function_name;\
     } \
 };
+//static const int defined_interface_count_##function_name \
+//= ::__private_helpers::LastNonEmpty<Copier, 0, Counter##function_name>::last;
 
 #define INTERFACES_FOOTER \
 public: std::shared_ptr<void> getDataPointer() const {return data_;}\
 protected: \
 static const int defined_interface_count_ \
-        = ::__private_helpers::LastNonEmpty<Copier, 0>::last; \
+        = ::__private_helpers::LastNonEmpty<Copier, 0, __private_helpers::DefaultCounter>::last; \
 static_assert(defined_interface_count_ > -1, "No interface defined!");\
 std::shared_ptr<void> data_; \
 template <int index, int dummy> friend struct Copier;\

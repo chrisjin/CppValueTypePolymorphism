@@ -225,6 +225,80 @@ public:
     ClassWithoutDefault(int a) {}
 };
 
+template <typename T, typename Another = int>
+struct HasFunction : std::false_type { };
+
+template <typename T>
+struct HasFunction <T, decltype(&T::getEmpty, 0)> : std::true_type { };
+
+
+template<class CounterClass, template<int a, int dummy> class T, bool empty, int count>
+struct tIfEmpty;
+
+template <class CounterClass, template<int a, int dummy> class T, int count>
+struct tLastNonEmpty {
+    static const int last = tIfEmpty<CounterClass, T, T<count, 0>::empty, count>::value;
+};
+
+template<class CounterClass, template<int a, int dummy> class T, int count>
+struct tIfEmpty<CounterClass, T, false, count> {
+    static const int value = tLastNonEmpty<CounterClass, T, count + 1>::last;
+};
+
+template<class CounterClass, template<int a, int dummy> class T, int count>
+struct tIfEmpty<CounterClass, T, true, count> {
+    static const int value = count - 1;
+};
+
+template<class CounterClass, template<int a, int dummy> class T, bool empty, int count>
+struct tIfEmpty1;
+
+template <class CounterClass, template<int a, int dummy> class T, int count>
+struct tLastNonEmpty1 {
+    static const int last = tIfEmpty1<CounterClass, T, HasFunction<T<count, 0>>::value, count>::value;
+};
+
+template<class CounterClass, template<int a, int dummy> class T, int count>
+struct tIfEmpty1<CounterClass, T, false, count> {
+    static const int value = tLastNonEmpty1<CounterClass, T, count + 1>::last;
+};
+
+template<class CounterClass, template<int a, int dummy> class T, int count>
+struct tIfEmpty1<CounterClass, T, true, count> {
+    static const int value = count - 1;
+};
+
+template<int index, int dummy>
+struct TestEmptyCheck {
+    const static bool empty = true;
+};
+
+template<int dummy>
+struct TestEmptyCheck<0, dummy> {
+    static constexpr bool getEmpty() {
+        return false;
+    }
+    const static bool empty = false;
+};
+static const auto mm = HasFunction<TestEmptyCheck<1, 0>>::value;
+//static int kk1 = 0;
+static int kk1 = tLastNonEmpty1<int, TestEmptyCheck, 0>::last;
+template<int dummy>
+struct TestEmptyCheck<1, dummy> {
+    static constexpr bool getEmpty() {
+        return false;
+    }
+    const static bool empty = false;
+};
+static const auto mm2 = HasFunction<TestEmptyCheck<1, 0>>::value;
+//static const auto mm2 = 0;
+//static int kk2 = 0;
+static int kk2 = tLastNonEmpty1<char, TestEmptyCheck, 0>::last;
+
+template<int dummy>
+struct TestEmptyCheck<2, dummy> {
+    const static bool empty = false;
+};
 
 
 int main()
@@ -395,4 +469,12 @@ int main()
     notcopyableEater.eat("Not copyable banana");
     cout << IsInterface__<ObjectWithName>::value << endl;
     cout << IsInterface__<ObjectWithNameImpl>::value << endl;
+    cout << "===" << endl;
+    cout << kk1 << endl;
+    cout << kk2 << endl;
+
+    cout << tLastNonEmpty<void, TestEmptyCheck, 0>::last << endl;
+    cout << mm << endl;
+    cout << mm2 << endl;
+
 }
